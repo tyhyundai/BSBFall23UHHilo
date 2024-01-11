@@ -1,0 +1,238 @@
+---
+title: "CS_171_Final"
+author: "Ty_Honda"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+## The Dataset:
+The current dataset derives from Rapsodo Baseball numbers retrieved from the Fall baseball season of 2023 at the University of Hawai'i at Hilo. The players of the team were informed that their data would be used for data manipulation and visualization and credit would be given where due for their contributions.  
+
+## Why UH Hilo Pitching data:
+The objective of using this dataset is to analyze and enhance our understanding of player performance, focusing on metrics such as pitch velocity, spin rate, BMI, and many other key factors that affect pitcher performance. 
+
+This analysis aims to identify areas of strength and opportunities for improvement that will contribute to the rapidly growing data-based analytics that are being implemented at the collegiate level of baseball. The aim is to utilize the data to complement the adjustments that our UH Hilo pitching coach, Kallen Miyatki, implements into our daily drills, bullpens, breakdown, arm care, as well as recovery programs.
+
+The insights gained from this study are expected to improve not only the University of Hawai'i at Hilo pitching staff, but will also benefit the future of data and sports analytics. 
+
+
+# Part I
+## Descriptive Statistics:
+
+In summary, the descriptive statistics were run based on fastball and changeup velocity numbers for each player. The descriptive statistical tests include the mean, median, mode, IQR, standard deviation, standard error, and Shapiro-Wilks test. The Shapiro-Wilks test for normality was run to examine how close the data fit to the normal distribution. If the data is found close to the normal distribution, that in turn helps pitching analysts better understand what factors can lead to peak performance. This also works in contrast, to what factors will cause one to deviate from normal distribution.
+
+Additionally, I ran a linear regression analysis based on the height and weight of each player to see if they affected fastball velocity. A linear regression analysis was performed to determine if there is a linear relationship between height and weight being factors to increase fastball velocity. It is a common saying that for a pitcher to gain any velocity, they must gain weight. If there is a linear model that can be displayed, it will allow the players to understand a niche weight for their height to gain velocity.
+
+Another statistical test that was performed was a Mann-Whitney test to compare the differences between both left and right-handedness pitchers. The dependent variable that was being studied was if the pitch was a strike. To prevent skewness, I made sure to include every pitch within the dataset. The significance behind performing a Mann-Whitney test is that the feedback can be utilized on the field, breaking down which pitchers need to focus on throwing more strikes.
+
+```{r}
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("tidyverse")
+library(tidyverse)
+
+#header = TRUE to specify that headers are as is
+fall23bbSet = read.csv("fall2023UHHilo.csv", header = TRUE, sep = ",")
+fall23bb = na.omit(fall23bbSet)
+
+#filtering for fastball velocity
+fbVelo = as.numeric(fall23bb[fall23bb$Pitch.Type == "Fastball", "Velocity"])
+
+#filtering for changeup velocity
+chVelo = as.numeric(fall23bb[fall23bb$Pitch.Type == "ChangeUp", "Velocity"])
+
+#descriptive stats of fastball and changeup velocity
+#mean
+meanFbVelo = mean(fbVelo, na.rm = TRUE)
+print(meanFbVelo)
+meanChVelo = mean(chVelo, na.rm = TRUE)
+print(meanChVelo)
+
+#median
+medianFbVelo = median(fbVelo, na.rm = TRUE)
+print(medianFbVelo)
+medianChVelo = median(chVelo, na.rm = TRUE)
+print(medianChVelo)
+
+#mode
+#defining mode funciton
+Mode = function(x) {
+  ux = unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+modeFbVelo = Mode(fbVelo)
+print(modeFbVelo)
+modeChVelo = Mode(chVelo)
+print(modeChVelo)
+
+#IQR
+iqrFbVelo = IQR(fbVelo, na.rm = TRUE)
+print(iqrFbVelo)
+iqrChVelo = IQR(chVelo, na.rm = TRUE)
+print(iqrChVelo)
+
+#standard error
+seFbVelo = sd(fbVelo, na.rm = TRUE) / sqrt(sum(!is.na(fbVelo)))
+print(seFbVelo)
+seChVelo = sd(chVelo, na.rm = TRUE) / sqrt(sum(!is.na(chVelo)))
+print(seChVelo)
+
+#standard deviation
+sdFbVelo = sd(fbVelo, na.rm = TRUE)
+print(sdFbVelo)
+sdChVelo = sd(chVelo, na.rm = TRUE)
+print(sdChVelo)
+
+#shapiro-wilks test
+shapiroFbVelo = shapiro.test(fbVelo)
+print(shapiroFbVelo)
+shapiroChVelo = shapiro.test(chVelo)
+print(shapiroChVelo)
+
+#linear regression analysis on height and weight affect on velocity
+#subset fastball velocity for multiple regression
+fbVeloData = fall23bb[fall23bb$Pitch.Type == "Fastball", c("Velocity", "Height", "Weight")]
+
+lmPitchingVelo = lm(Velocity ~ Height + Weight, data = fbVeloData)
+summary(lmPitchingVelo)
+
+#Mann-Whitney test
+pitcherHandedness = factor(fall23bb$Handedness, levels = c("R", "L"))
+fall23bb$Is.Strike = as.numeric(fall23bb$Is.Strike == "YES")
+mannWhitneyStike = wilcox.test(Is.Strike ~ Handedness, data = fall23bb)
+print(mannWhitneyStike)
+```
+
+# Part II
+## Data Visualization:
+
+The plots that were utilized for data visualization inlcudes a linear regression scatter plots, a box plot, and one 3D scatter plot. 
+
+The first linear regression scatter plot model was used to visualize the regression analysis based on height and weight and their respective affects on fastball velocity. A linear regression was chosen due to the fact that it is a clean and precise way to visualize the data points, especially with the implementation of the regression line.
+
+The box plot is utilized to display the Mann-Whitney test results. I decided that it would be most convenient to have both box plots displayed on the same figure that way the comparison can be more easily made between both fastball and changeup velocities.
+
+The 3-Dimensional scatter plot was implemented to display the effect that total spin has on pitch velocity. I chose to implement player name on to one axis to provide information for the players on where their velocity stacks up among members of the pitching staff. Additionally, I included the pitchers median fastball velocity, this way they are provided feedback for their difference from the median. This is a valuable piece of information for data visualization because the player is informed about the difference between their top and their median, essential for implementing pitch design as well as understanding their role on the pitching staff.
+
+```{r}
+#install.packages("plotly")
+library(plotly)
+#install.packages("ggplot2")
+library(ggplot2)
+
+#linear regression analysis height and weight plot
+ggplot(fbVeloData, aes(x = Height, y = Velocity, color = Weight)) +
+  geom_point() +
+  geom_smooth(method = "lm", aes(group = 1), color = "black") +
+  theme_minimal() +
+  labs(title = "Linear Regression Analysis of Pitching Velocity")
+
+#Mann-Whitney box plot test results
+combinedPitchVelo = fall23bb[fall23bb$Pitch.Type %in% c("Fastball", "ChangeUp"), c("Velocity", "Pitch.Type")]
+
+boxplot(Velocity ~ Pitch.Type, data = combinedPitchVelo,
+        main = "Comparison of Pitch Velocities",
+        xlab = "Pitch Type",
+        ylab = "Velocity",
+        horizontal = TRUE,
+        col = c("salmon", "lightblue"))
+
+#3D Scatter plot for player top velocity as well as their median Fastball velocity
+topPlayerVelo = fall23bb %>%
+  filter(Pitch.Type == "Fastball") %>%
+  group_by(Player.Name) %>%
+  summarise(topVeloFb = max(Velocity), Total.Spin = first(Total.Spin[which.max(Velocity)]))
+
+medianTopVelo = median(topPlayerVelo$topVeloFb, na.rm = TRUE)
+
+plot_ly(data = topPlayerVelo, x = ~Player.Name, y = ~Total.Spin, z = ~topVeloFb,
+                       type = "scatter3d", mode = "markers",
+                       marker = list(size = 4, colorscale = 'Viridis'), name = "Top Velocity") %>%
+  add_markers(data = topPlayerVelo,
+              x = ~Player.Name, y = ~Total.Spin, z = rep(medianTopVelo, nrow(topPlayerVelo)),
+              marker = list(color = 'red', size = 2, symbol = 'square'), name = "Median Velocity") %>%
+  layout(
+    scene = list(
+      xaxis = list(title = 'Player Name'),
+      yaxis = list(title = 'Total Spin'),
+      zaxis = list(title = 'Top Velocity (Fastball)')),
+    title = "3D Scatter Plot of Player Name, Total Spin, 
+    and Top Velocity (Fastball) with Median Velocity per Pitcher")
+```
+
+# Part III
+## Data Management & Visualization:
+
+I have decided to create a data frame and calculate the body mass index (BMI) for each player on the UH Hilo baseball team. Additionally, the data was separated into pitchers who are over 72 in tall (6ft) and those who are 72 in and under. The data was then used to create a scatter plot that implements a linear regression displaying the relationship between BMI and fastball velocity for pitchers both 72 in and under, and over 72 in. This was then followed up with a t-test for testing the two means of fastball velocity and BMI.
+
+With the creation of the data frame, I then created a heat map to display the fastball velocities based on the BMI of each player. The heat map is a different way to display the relationship between fastball velocity and BMI. I included the height and weight as the axis variables, utilizing the velocity as the heating element, and the BMI was represented with the dot size. The heat map compiles all of these different factors into a visualization that can be more easily interpreted.
+
+I decided to subset all of the data from the data set to extract only fastball data and the corresponding data such as the name of the player, total spin, handedness, and velocity. Then, I went on to handle all of the possible not-a-number (NaN) cells within the data set by filtering them out. Then, I created another linear regression scatter plot to display the relationship between total spin and pitch velocity based on fastball data and handedness.
+
+```{r}
+#BMI data frame
+bmiData = fall23bb %>%
+  group_by(Player.Name) %>%
+  summarise(
+    Weight = first(Weight),
+    Height = first(Height),
+    BMI = (first(Weight) / (first(Height)^2)) * 703)
+print(bmiData)
+
+fastballData = fall23bb %>%
+  filter(Pitch.Type == "Fastball")
+
+fastballBmiData = fastballData %>%
+  left_join(bmiData, by = "Player.Name")
+print(head(fastballBmiData, n = 10))
+
+fastballBmiData$HeightCategory = ifelse(fastballBmiData$Height.y > 72, "Over 72", "72 or below")
+
+ggplot(fastballBmiData, aes(x = BMI, y = Velocity, color = HeightCategory)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_color_manual(values = c("Over 72" = "blue", "72 or below" = "red")) +
+  labs(title = "Scatter Plot of BMI vs Fastball Velocity",
+       x = "BMI",
+       y = "Fastball Velocity",
+       color = "Height Category (in)") +
+  theme_minimal()
+
+#T-Test for BMI and fastball velocities
+tTest = t.test(Velocity ~ HeightCategory, data = fastballBmiData)
+print(tTest)
+
+#heatmap of fastball velocity based on bmi
+ggplot(fastballBmiData, aes(x = Height.y, y = Weight.y, color = Velocity, size = BMI)) +
+  geom_point(alpha = 0.7) +  # Semi-transparent points
+  labs(x = "Height", y = "Weight", color = "Fastball Velocity", size = "BMI") +
+  ggtitle("Scatterplot: Height vs Weight with Fastball Velocity and BMI") +
+  scale_color_gradient(low = "lightblue", high = "red") +
+  guides(size = guide_legend(title = "BMI")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#Scatter plot of total spin vs velocity with linear regression
+#subsetting fb data
+fbData23 = fall23bb %>%
+  filter(Pitch.Type == "Fastball") %>%
+  select(Player.Name, Total.Spin, Handedness, Velocity)
+
+#handling NA's
+fbData23 = fbData23 %>%
+  filter(!is.na(Velocity) & !is.na(Total.Spin))
+fbData23$Velocity = as.numeric(fbData23$Velocity)
+fbData23$Total.Spin = as.numeric(fbData23$Total.Spin)
+print(head(fbData23, n = 10))
+
+ggplot(fbData23, aes(x = Velocity, y = Total.Spin, color = Handedness)) +
+  geom_point() +
+  geom_smooth(method = "lm", aes(fill = Handedness), alpha = 0.2, na.rm = TRUE) +
+  labs(title = "Scatter plot of Total Spin vs Velocity with Linear Regression", x = "Velocity", y = "Total Spin") +
+  scale_color_manual(values = c("L" = "skyblue", "R" = "pink")) +
+  theme_minimal()
+```
